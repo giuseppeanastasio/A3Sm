@@ -11,8 +11,6 @@ clc;
 
 %% SIMULATION INITIALIZATION
 
-trimStr = "analytical"; % DELETE NUMERICAL
-
 % auxiliary variables
 degToRad = pi/180 ;
 radTodeg = 180/pi ;
@@ -25,9 +23,7 @@ omegab_0 = [0 0 0]' ; %  [rad/s]  angular velocity (body components)
 p_0 = [0 0 -2]' ; % [m] position
 vb_0 = [0 0 0]' ; % [m/s] linear velocity
 R_0 = [cos(pi/4) -sin(pi/4) 0; sin(pi/4) cos(pi/4) 0; 0 0 1] ;
-%disturbance = [cos(pi/16) -sin(pi/16) 0; sin(pi/16) cos(pi/16) 0; 0 0 1] ;
-disturbance = eye(3);
-q_0 = rotm2quat(disturbance*R_0)';
+q_0 = rotm2quat(R_0)';
 
 % UAV inertial and dynamic parameters
 % Nominal values for the parameters
@@ -66,65 +62,28 @@ UAV.F = -[UAV.n UAV.n UAV.n UAV.n;...
     (crossmat(p3)+sigma*eye(3))*UAV.n (crossmat(p4)+sigma*eye(3))*UAV.n] ;
 UAV.Finv = pinv(UAV.F) ;
 
-% epsilon = [-1 -1 1 1]';
-% UAV.p1 = UAV.b*[cos(pi/4); sin(pi/4); 0];
-% UAV.p2 = UAV.b*[-cos(pi/4); -sin(pi/4); 0];
-% UAV.p3 = UAV.b*[cos(pi/4); -sin(pi/4); 0];
-% UAV.p4 = UAV.b*[-cos(pi/4); sin(pi/4); 0];
-% par.e_3 = Environment.e_3;
-% UAV.Fstar = -[par.e_3 par.e_3 par.e_3 par.e_3;
-%     (crossmat(UAV.p1)+epsilon(1)*sigma*eye(3))*par.e_3 (crossmat(UAV.p2)+epsilon(2)*sigma*eye(3))*par.e_3 (crossmat(UAV.p3)+epsilon(3)*sigma*eye(3))*par.e_3 (crossmat(UAV.p4)+epsilon(4)*sigma*eye(3))*par.e_3];
-
-
-% Commands (Open loop: 1 - Thrust, 2 - Omega)
-Command_type = 2 ;
-T_cmd = [0.760275 0.760275 0.760275 0.760275]' ;
-Omega_cmd = [1600 1600 1600 1600]';     % tentative Omega
-Omega_0 = Omega_cmd;
-
 % Task 1.2 - Stabilize UAV at target position
 omegab_d = [0 0 0]' ; %  [rad/s]  angular velocity (body components)
 p_d = [0 0 -2]' ; % [m] position
 vb_d = [0 0 0]' ; % [m/s] linear velocity
 R_d = [cos(pi/4) -sin(pi/4) 0; sin(pi/4) cos(pi/4) 0; 0 0 1] ;
 q_d = rotm2quat(R_d)' ;
-% Kpx = 10 ;
-% Kpy = 10 ;
-% Kpz = 10 ;
-% Kdx = 10 ;
-% Kdy = 10 ;
-% Kdz = 10 ;
 
 %% TRIM EVALUATION
 
-if trimStr == "numerical"
-    %%% Numerical computation of trim
-    trim_evaluation = 1;  % allows the trim function to inject its 'u'.
-    y = [p_d; omegab_d; vb_d; q_d]; % target output
-    u = [1550 1550 1550 1550]';     % tentative trim (input 'u')
-    x = [];
-    ix = [];
-    iu = [];
-    iy = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]; % index target all output elements
-    [x,u,y,dx,options] = trim('UAV_Task_1',x,u,y,ix,iu,iy);
-    Omega_cmd = u;
-    Omega_0 = Omega_cmd;
-    trim_evaluation = 0;
-elseif trimStr == "analytical"
-    %%% Analytical computation of trim
-    e_3 = Environment.e_3;
-    g = Environment.g;
-    nub_d = [vb_d; omegab_d];
-    cross_six = [crossmat(nub_d(4:6)), zeros(3,3);
-                 crossmat(nub_d(1:3)), crossmat(nub_d(4:6))];
-    % Steady state dynamics
-    w_g = g*[UAV.m*R_d'*e_3; UAV.S*R_d'*e_3];
-    u = UAV.Finv*(cross_six*UAV.M*nub_d + UAV.D*nub_d - w_g);
-    
-    trimedOmega = sqrt(u/k_f);
-    Omega_cmd = mean(trimedOmega)*ones(4,1);  % mean to minimize numerical artifacts
-    Omega_0 = Omega_cmd;
-end
+%%% Analytical computation of trim
+e_3 = Environment.e_3;
+g = Environment.g;
+nub_d = [vb_d; omegab_d];
+cross_six = [crossmat(nub_d(4:6)), zeros(3,3);
+             crossmat(nub_d(1:3)), crossmat(nub_d(4:6))];
+% Steady state dynamics
+w_g = g*[UAV.m*R_d'*e_3; UAV.S*R_d'*e_3];
+u = UAV.Finv*(cross_six*UAV.M*nub_d + UAV.D*nub_d - w_g);
+
+trimedOmega = sqrt(u/k_f);
+Omega_cmd = mean(trimedOmega)*ones(4,1);  % mean to minimize numerical artifacts
+Omega_0 = Omega_cmd;
 
 %% SIMULATION RUN
 
@@ -148,7 +107,6 @@ xlabel('[s]')
 ylabel('[rad/s]')
 title('Angular velocity')
 legend('p', 'q', 'r')
-
 
 figure
 plot(simout.p,'LineWidth',3);
