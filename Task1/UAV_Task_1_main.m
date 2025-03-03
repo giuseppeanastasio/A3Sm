@@ -52,14 +52,20 @@ sigma = 5.343e-3;      % [m] Torque-to-thrust ratio
 UAV.lambda_r = 1;
 
 % Control allocation
-UAV.n = [0; 0; 1] ;
-p1 = UAV.b * [ sqrt(2)/2;  sqrt(2)/2;  0] ;
-p2 = UAV.b * [-sqrt(2)/2; -sqrt(2)/2;  0] ;
-p3 = UAV.b * [ sqrt(2)/2; -sqrt(2)/2;  0] ;
-p4 = UAV.b * [-sqrt(2)/2;  sqrt(2)/2;  0] ;
-UAV.F = -[UAV.n UAV.n UAV.n UAV.n;...
-    (crossmat(p1)-sigma*eye(3))*UAV.n (crossmat(p2)-sigma*eye(3))*UAV.n...
-    (crossmat(p3)+sigma*eye(3))*UAV.n (crossmat(p4)+sigma*eye(3))*UAV.n] ;
+gamma1 = pi/4;
+gamma2 = gamma1 + pi;
+gamma3 = gamma2 + pi/2;
+gamma4 = gamma3 - pi;
+
+UAV.F = -[
+    0 0 0 0;
+    0 0 0 0;
+    1 1 1 1;
+    -UAV.b*sin(gamma1) -UAV.b*sin(gamma2) -UAV.b*sin(gamma3) -UAV.b*sin(gamma4);
+    UAV.b*cos(gamma1) UAV.b*cos(gamma2) UAV.b*cos(gamma3) UAV.b*cos(gamma4);
+    -sigma -sigma sigma sigma
+    ];
+
 UAV.Finv = pinv(UAV.F) ;
 
 % Task 1.2 - Stabilize UAV at target position
